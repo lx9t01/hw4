@@ -70,9 +70,9 @@ void cudaMultiplyKernel(const cufftComplex *raw_data,
 
         // }
         
-        out_data[thread_index].x /= raw_data[thread_index].x;
+        out_data[thread_index].x = raw_data[thread_index].x;
         
-        out_data[thread_index].y /= raw_data[thread_index].y;
+        out_data[thread_index].y = raw_data[thread_index].y;
         thread_index += blockDim.x * gridDim.x;
     }
 }
