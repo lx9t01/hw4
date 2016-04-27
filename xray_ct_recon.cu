@@ -316,7 +316,7 @@ int main(int argc, char** argv){
     // call back projection kernel
     cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
     checkCUDAKernelError();
-    gpuErrchk(cudaMemcpy(output_host, output_dev, size_result * sizeof(float), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(output_host, output_dev, size_result, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaFree(dev_sinogram_float));
     gpuErrchk(cudaFree(output_dev));
 
