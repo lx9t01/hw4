@@ -251,8 +251,7 @@ int main(int argc, char** argv){
     over to dev_sinogram_cmplx. */
 
     gpuErrchk(cudaMalloc((void**)&dev_sinogram_cmplx, nAngles * sinogram_width * sizeof(cufftComplex)));
-    gpuErrchk(cudaMemcpy(dev_sinogram_cmplx, sinogram_host, \
-        nAngles * sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(dev_sinogram_cmplx, sinogram_host, nAngles * sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
 
 
 
@@ -289,6 +288,7 @@ int main(int argc, char** argv){
     // call the kernel to perform the filter
     cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, nAngles, sinogram_width);
     checkCUDAKernelError();
+    printf("finish filter\n");
     // inverse fft
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_INVERSE));
     // destroy the cufft plan
@@ -300,6 +300,7 @@ int main(int argc, char** argv){
     checkCUDAKernelError();
     // free dev_sinogram_cmplx
     gpuErrchk(cudaFree(dev_sinogram_cmplx));
+    prinf("finish fft\n");
     // gpuErrchk(cudaFree(dev_out_filter));
 
     /* TODO 2: Implement backprojection.
@@ -314,6 +315,7 @@ int main(int argc, char** argv){
 
     // call back projection kernel
     cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
+    printf("finish back proj\n");
     checkCUDAKernelError();
     gpuErrchk(cudaMemcpy(output_host, output_dev, size_result, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaFree(dev_sinogram_float));
