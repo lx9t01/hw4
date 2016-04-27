@@ -60,19 +60,19 @@ void cudaMultiplyKernel(const cufftComplex *raw_data,
     unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
 
     while (thread_index < nAngles * sinogram_width) {
-        unsigned int p = thread_index % sinogram_width; 
-        if (p < sinogram_width / 2) {
-            out_data[thread_index].x = raw_data[thread_index].x * (2.0 * p / sinogram_width);
-            out_data[thread_index].y = raw_data[thread_index].y * (2.0 * p / sinogram_width);
-        } else {
-            out_data[thread_index].x = raw_data[thread_index].x * (2.0 * (sinogram_width - p) / sinogram_width);
-            out_data[thread_index].y = raw_data[thread_index].y * (2.0 * (sinogram_width - p) / sinogram_width);
+        // unsigned int p = thread_index % sinogram_width; 
+        // if (p < sinogram_width / 2) {
+        //     out_data[thread_index].x = raw_data[thread_index].x * (2.0 * p / sinogram_width);
+        //     out_data[thread_index].y = raw_data[thread_index].y * (2.0 * p / sinogram_width);
+        // } else {
+        //     out_data[thread_index].x = raw_data[thread_index].x * (2.0 * (sinogram_width - p) / sinogram_width);
+        //     out_data[thread_index].y = raw_data[thread_index].y * (2.0 * (sinogram_width - p) / sinogram_width);
 
-        }
+        // }
         
-        // out_data[thread_index].x /= (nAngles * sinogram_width);
+        out_data[thread_index].x /= raw_data[thread_index].x;
         
-        // out_data[thread_index].y /= (nAngles * sinogram_width);
+        out_data[thread_index].y /= raw_data[thread_index].y;
         thread_index += blockDim.x * gridDim.x;
     }
 }
@@ -114,7 +114,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
                 q = -1/m;
                 xi = (y0 - m * x0)/(q - m);
                 yi = q * xi;
-                d = sqrt(xi * xi + yi * yi);
+                d = sqrtf(xi * xi + yi * yi);
             }
             if ((q > 0 && xi < 0)||(q < 0 && xi > 0)) {
                 output_dev[thread_index] += dev_sinogram_float[(int)(i * sinogram_width - d + sinogram_width / 2)];
