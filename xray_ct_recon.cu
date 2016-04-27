@@ -54,7 +54,8 @@ void checkCUDAKernelError()
 
 }
 
-__gloabl__ void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
+__gloabl__ 
+void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
                                 cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
     unsigned int l = nAngles * sinogram_width; 
     unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
