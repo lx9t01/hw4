@@ -134,7 +134,7 @@ void cudaCallMultiplyKernel (const unsigned int blocks,
                             cufftComplex *raw_data,
                             const unsigned int nAngles, 
                             const unsigned int sinogram_width) {
-    cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, out_data, nAngles, sinogram_width);
+    cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, nAngles, sinogram_width);
 }
 
 
