@@ -319,8 +319,6 @@ int main(int argc, char** argv){
 
 
 
-
-
     /* Export image data. */
 
     for(j = 0; j < width; j++){
