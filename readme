@@ -1,0 +1,20 @@
+// readme
+
+1.1 
+Yes, using shared memory properly would increase performance. 
+The way to do it is: 
+The visited vector (X) should be placed inside the shared memory, becuse for each neighbour in Ea vector we will have to check if the vertex has been accessed. 
+The frontier (F) being called from the GPU kernal should be placed in global memory, because it only have to be accessed 2 times (1 for check if F[threadID] == true and 2 for F[threadId] = false)
+The cost (C) should be placed within global memeory because the cost only get updated once the whole time. 
+Ea vector should be placed within shared memory if the graph is condensed, while not necessary if the graph if sparce enough. 
+Va need not to use the shared memory because it only has to be accessed 2 consecutive elements per time, and global memory access uses two cache lines but fast enough. 
+
+
+1.2 
+It would be good to use reduction methods to calculate the sum of the F vector, and check if the sum is 0. If the F is all false, then the sum should be 0. 
+
+1.3
+keep a queue of fromtier vector F and check if the queue is empty after each iteration. Or use a flag to indicate if the queue is empty after the iteration. 
+
+2.
+
