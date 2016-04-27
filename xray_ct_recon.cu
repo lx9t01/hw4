@@ -116,7 +116,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
                 yi = q * xi;
                 d = sqrt(xi * xi + yi * yi);
             }
-            if ((q > 0 && xi < 0)||(q < 0) && xi > 0) {
+            if ((q > 0 && xi < 0)||(q < 0 && xi > 0)) {
                 output_dev[thread_index] += dev_sinogram_float[(int)(i * sinogram_width - d + sinogram_width / 2)];
             } else {
                 output_dev[thread_index] += dev_sinogram_float[(int)(i * sinogram_width + d + sinogram_width / 2)];
