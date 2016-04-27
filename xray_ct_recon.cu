@@ -55,24 +55,24 @@ void checkCUDAKernelError()
 }
 
 __global__ 
-void cudaMultiplyKernel(const cufftComplex *raw_data, 
-                        cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
+void cudaMultiplyKernel(cufftComplex *raw_data, 
+                        unsigned int nAngles, unsigned int sinogram_width) {
     unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
 
     while (thread_index < nAngles * sinogram_width) {
-        // unsigned int p = thread_index % sinogram_width; 
-        // if (p < sinogram_width / 2) {
-        //     out_data[thread_index].x = raw_data[thread_index].x * (2.0 * p / sinogram_width);
-        //     out_data[thread_index].y = raw_data[thread_index].y * (2.0 * p / sinogram_width);
-        // } else {
-        //     out_data[thread_index].x = raw_data[thread_index].x * (2.0 * (sinogram_width - p) / sinogram_width);
-        //     out_data[thread_index].y = raw_data[thread_index].y * (2.0 * (sinogram_width - p) / sinogram_width);
+        unsigned int p = thread_index % sinogram_width; 
+        if (p < sinogram_width / 2) {
+            raw_data[thread_index].x = raw_data[thread_index].x * (2.0 * p / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * (2.0 * p / sinogram_width);
+        } else {
+            raw_data[thread_index].x = raw_data[thread_index].x * (2.0 * (sinogram_width - p) / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * (2.0 * (sinogram_width - p) / sinogram_width);
 
-        // }
+        }
         
-        out_data[thread_index].x = raw_data[thread_index].x;
+        // out_data[thread_index].x = raw_data[thread_index].x;
         
-        out_data[thread_index].y = raw_data[thread_index].y;
+        // out_data[thread_index].y = raw_data[thread_index].y;
         thread_index += blockDim.x * gridDim.x;
     }
 }
@@ -131,8 +131,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 
 void cudaCallMultiplyKernel (const unsigned int blocks, 
                             const unsigned int threadsPerBlock,
-                            const cufftComplex *raw_data,
-                            cufftComplex *out_data,
+                            cufftComplex *raw_data,
                             const unsigned int nAngles, 
                             const unsigned int sinogram_width) {
     cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, out_data, nAngles, sinogram_width);
@@ -280,28 +279,28 @@ int main(int argc, char** argv){
     // cufftComplex *dev_filter_v;
     // gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex) * sinogram_width));
     // gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
-    cufftComplex *dev_out_filter;
-    gpuErrchk(cudaMalloc((void**)&dev_out_filter, sizeof(cufftComplex) * sinogram_width * nAngles));
+    // cufftComplex *dev_out_filter;
+    // gpuErrchk(cudaMalloc((void**)&dev_out_filter, sizeof(cufftComplex) * sinogram_width * nAngles));
 
     cufftHandle plan;
     gpuFFTchk(cufftPlan1d(&plan, nAngles * sinogram_width, CUFFT_C2C, 1));
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_FORWARD));
 
     // call the kernel to perform the filter
-    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, dev_out_filter, nAngles, sinogram_width);
+    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, nAngles, sinogram_width);
     checkCUDAKernelError();
     // inverse fft
-    gpuFFTchk(cufftExecC2C(plan, dev_out_filter, dev_out_filter, CUFFT_INVERSE));
+    gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_INVERSE));
     // destroy the cufft plan
     gpuFFTchk(cufftDestroy(plan));
 
     // take the float
     gpuErrchk(cudaMalloc((void**)&dev_sinogram_float, nAngles * sinogram_width * sizeof(float)));
-    cudaCallTakeFloatKernel(nBlocks, threadsPerBlock, dev_out_filter, dev_sinogram_float, nAngles, sinogram_width);
+    cudaCallTakeFloatKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, dev_sinogram_float, nAngles, sinogram_width);
     checkCUDAKernelError();
     // free dev_sinogram_cmplx
     gpuErrchk(cudaFree(dev_sinogram_cmplx));
-    gpuErrchk(cudaFree(dev_out_filter));
+    // gpuErrchk(cudaFree(dev_out_filter));
 
     /* TODO 2: Implement backprojection.
         - Allocate memory for the output image.
