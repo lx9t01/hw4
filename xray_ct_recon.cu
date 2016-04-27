@@ -300,7 +300,7 @@ int main(int argc, char** argv){
     checkCUDAKernelError();
     // free dev_sinogram_cmplx
     gpuErrchk(cudaFree(dev_sinogram_cmplx));
-    prinf("finish fft\n");
+    printf("finish fft\n");
     // gpuErrchk(cudaFree(dev_out_filter));
 
     /* TODO 2: Implement backprojection.
