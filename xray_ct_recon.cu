@@ -163,7 +163,7 @@ int main(int argc, char** argv){
     // if you are using a shared computer. You may ignore or remove these
     // functions if you are running on your local machine.
     TA_Utilities::select_least_utilized_GPU();
-    int max_time_allowed_in_seconds = 10;
+    int max_time_allowed_in_seconds = 30;
     TA_Utilities::enforce_time_limit(max_time_allowed_in_seconds);
 
     // Begin timer and check for the correct number of inputs
