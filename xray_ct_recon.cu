@@ -62,11 +62,11 @@ void cudaMultiplyKernel(cufftComplex *raw_data,
     while (thread_index < nAngles * sinogram_width) {
         unsigned int p = thread_index % sinogram_width; 
         if (p < sinogram_width / 2) {
-            raw_data[thread_index].x = raw_data[thread_index].x * (6 * (float)p / sinogram_width);
-            raw_data[thread_index].y = raw_data[thread_index].y * (6 * (float)p / sinogram_width);
+            raw_data[thread_index].x = raw_data[thread_index].x * ((2.0 * p) / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * ((2.0 * p) / sinogram_width);
         } else {
-            raw_data[thread_index].x = raw_data[thread_index].x * (6 * (float)(sinogram_width - p) / sinogram_width);
-            raw_data[thread_index].y = raw_data[thread_index].y * (6 * (float)(sinogram_width - p) / sinogram_width);
+            raw_data[thread_index].x = raw_data[thread_index].x * ((2.0 * (sinogram_width - p)) / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * ((2.0 * (sinogram_width - p)) / sinogram_width);
 
         }
         
@@ -104,7 +104,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
-            float d, xi, yi, q;
+             d, xi, yi, q;
             if (sita == 0) {
                 d = x0;
             } else if (sita == PI / 2) {
@@ -282,7 +282,7 @@ int main(int argc, char** argv){
     // gpuErrchk(cudaMalloc((void**)&dev_out_filter, sizeof(cufftComplex) * sinogram_width * nAngles));
 
     cufftHandle plan;
-    gpuFFTchk(cufftPlan1d(&plan, nAngles * sinogram_width, CUFFT_C2C, 1));
+    gpuFFTchk(cufftPlan1d(&plan, sinogram_width, CUFFT_C2C, nAngles));
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_FORWARD));
 
     // call the kernel to perform the filter
