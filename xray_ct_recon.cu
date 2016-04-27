@@ -104,7 +104,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
-            float d;
+            float d, xi, yi;
             if (sita == 0) {
                 d = x0;
             } else if (sita == PI / 2) {
@@ -112,13 +112,16 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
             } else {
                 float m = -cos(sita)/sin(sita);
                 float q = -1/m;
-                float xi = (y0 - m * x0)/(q - m);
-                float yi = q * xi;
+                xi = (y0 - m * x0)/(q - m);
+                yi = q * xi;
                 d = sqrt(xi * xi + yi * yi);
             }
-            output_dev[thread_index] += dev_sinogram_float[(int)(i * nAngles + d + sinogram_width / 2)];
+            if ((q > 0 && xi < 0)||(q < 0) && xi > 0) {
+                output_dev[thread_index] += dev_sinogram_float[(int)(i * sinogram_width - d + sinogram_width / 2)];
+            } else {
+                output_dev[thread_index] += dev_sinogram_float[(int)(i * sinogram_width + d + sinogram_width / 2)];
+            }
         }
-
         thread_index += blockDim.x * gridDim.x;
     }
 
