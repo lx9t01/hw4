@@ -62,11 +62,11 @@ void cudaMultiplyKernel(cufftComplex *raw_data,
     while (thread_index < nAngles * sinogram_width) {
         unsigned int p = thread_index % sinogram_width; 
         if (p < sinogram_width / 2) {
-            raw_data[thread_index].x = raw_data[thread_index].x * (2.0 * p / sinogram_width);
-            raw_data[thread_index].y = raw_data[thread_index].y * (2.0 * p / sinogram_width);
+            raw_data[thread_index].x = raw_data[thread_index].x * (2 * (float)p / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * (2 * (float)p / sinogram_width);
         } else {
-            raw_data[thread_index].x = raw_data[thread_index].x * (2.0 * (sinogram_width - p) / sinogram_width);
-            raw_data[thread_index].y = raw_data[thread_index].y * (2.0 * (sinogram_width - p) / sinogram_width);
+            raw_data[thread_index].x = raw_data[thread_index].x * (2 * (float)(sinogram_width - p) / sinogram_width);
+            raw_data[thread_index].y = raw_data[thread_index].y * (2 * (float)(sinogram_width - p) / sinogram_width);
 
         }
         
