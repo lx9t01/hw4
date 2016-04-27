@@ -144,8 +144,19 @@ int main(int argc, char** argv){
 
     /*********** Assignment starts here *********/
 
-    /* TODO: Allocate memory for all GPU storage above, copy input sinogram
+    /* TODO ok: Allocate memory for all GPU storage above, copy input sinogram
     over to dev_sinogram_cmplx. */
+    int FILTER_SIDE_WIDTH = 314; 
+    int FILTER_SIZE = 2 * FILTER_SIDE_WIDTH + 1;
+
+    int sino_length = sinogram_width * nAngles;
+    int padded_length = sino_length + FILTER_SIZE - 1;
+
+    gpuErrchk(cudaMalloc((void**)&dev_sinogram_cmplx, padded_length * sizeof(cufftComplex)));
+    gpuErrchk(cudaMemcpy(dev_sinogram_cmplx, sinogram_host, \
+        sino_length * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemset(dev_sinogram_cmplx + sino_length, 0, (padded_length - sino_length) * sizeof(cufftComplex)));
+
 
 
     /* TODO 1: Implement the high-pass filter:
@@ -158,6 +169,19 @@ int main(int argc, char** argv){
         Note: If you want to deal with real-to-complex and complex-to-real
         transforms in cuFFT, you'll have to slightly change our code above.
     */
+
+    // create the high pass filter vector
+
+    cufftComplex *filter_v = (cufftComplex*)malloc(sizeof(cufftComplex) * FILTER_SIZE);
+    for (int i = -FILTER_SIDE_WIDTH; i <= FILTER_SIDE_WIDTH; ++i) {
+        filter_v[ FILTER_SIDE_WIDTH + i ].x = abs((float)i / FILTER_SIDE_WIDTH);
+        filter_v[ FILTER_SIDE_WIDTH + i ].y = 0;
+    }
+
+    // DATA storage
+    cufftComplex *dev_filter_v;
+    gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex)*padded_length));
+    gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, FILTER_SIZE * sizeof(cufftComplex), cudaMemcpyHostToDevice));
 
 
     /* TODO 2: Implement backprojection.
