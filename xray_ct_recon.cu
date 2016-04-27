@@ -152,7 +152,7 @@ void cudaCallBackProjKernel(const unsigned int nBlocks,
                             const float *dev_sinogram_float, 
                             float *output_dev, 
                             const unsigned int nAngles, 
-                            const unsigned int sinogram_width
+                            const unsigned int sinogram_width,
                             const unsigned int width, 
                             const unsigned int height) {
     cudaBackProjKernel<<<nBlocks, threadsPerBlock>>>(dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
