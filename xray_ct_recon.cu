@@ -131,7 +131,7 @@ void cudaCallMultiplyKernel (const unsigned int blocks,
                             cufftComplex *out_data,
                             const unsigned int nAngles, 
                             const unsigned int sinogram_width) {
-    cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, impulse_v, out_data, nAngles, sinogram_width);
+    cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, out_data, nAngles, sinogram_width);
 }
 
 
@@ -284,7 +284,7 @@ int main(int argc, char** argv){
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_FORWARD));
 
     // call the kernel to perform the filter
-    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, dev_filter_v, dev_out_filter, nAngles, sinogram_width);
+    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, dev_out_filter, nAngles, sinogram_width);
     checkCUDAKernelError();
     // inverse fft
     gpuFFTchk(cufftExecC2C(plan, dev_out_filter, dev_out_filter, CUFFT_INVERSE));
