@@ -286,8 +286,8 @@ int main(int argc, char** argv){
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_FORWARD));
 
     // call the kernel to perform the filter
-    // cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, nAngles, sinogram_width);
-    // checkCUDAKernelError();
+    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, nAngles, sinogram_width);
+    checkCUDAKernelError();
     printf("finish filter\n");
     // inverse fft
     gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_INVERSE));
