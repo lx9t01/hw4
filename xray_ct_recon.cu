@@ -57,16 +57,15 @@ void checkCUDAKernelError()
 __global__ 
 void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
                                 cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
-    unsigned int l = nAngles * sinogram_width; 
     unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
 
-    while (thread_index < l) {
+    while (thread_index < nAngles * sinogram_width) {
         unsigned int p = thread_index % sinogram_width; 
 
         out_data[thread_index].x = raw_data[thread_index].x * impulse_v[p].x - raw_data[thread_index].y * impulse_v[p].y;
-        out_data[thread_index].x /= l;
+        out_data[thread_index].x /= (nAngles * sinogram_width);
         out_data[thread_index].y = raw_data[thread_index].x * impulse_v[p].y + raw_data[thread_index].y * impulse_v[p].x;
-        out_data[thread_index].y /= l;
+        out_data[thread_index].y /= (nAngles * sinogram_width);
         thread_index += blockDim.x * gridDim.x;
     }
 }
@@ -75,8 +74,7 @@ __global__
 void cudaTakeFloatKernel(const cufftComplex *dev_out_filter, 
                         float *dev_sinogram_float, const unsigned int nAngles, const unsigned int sinogram_width) {
     unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
-    unsigned int l = nAngles * sinogram_width; 
-    while (thread_index < l) {
+    while (thread_index < nAngles * sinogram_width) {
         dev_sinogram_float[thread_index] = dev_out_filter[thread_index].x;
         thread_index += blockDim.x * gridDim.x;
     }
@@ -92,9 +90,8 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
                         const unsigned int height) {
     unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
     // unsigned int l = nAngles * sinogram_width; 
-    unsigned int size = width * height;
 
-    while (thread_index < size) {
+    while (thread_index < width * height) {
         int y0 = thread_index / width;
         int x0 = thread_index % width;
 
