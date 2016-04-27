@@ -100,7 +100,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * 2 * PI / nAngles;
-            float d, d_int;
+            float d;
             if (sita == 0) {
                 d = x0;
             } else if (sita == PI / 2) {
@@ -116,8 +116,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
                 float yi = q * xi;
                 d = sqrt(xi * xi + yi * yi);
             }
-            d_int = (int)d;
-            output_dev[thread_index] += dev_sinogram_float[i * nAngles + d_int + sinogram_width / 2];
+            output_dev[thread_index] += dev_sinogram_float[(int)(i * nAngles + d + sinogram_width / 2)];
         }
 
         thread_index += blockDim.x * gridDim.x;
@@ -295,7 +294,7 @@ int main(int argc, char** argv){
 
     // take the float
     gpuErrchk(cudaMalloc((void**)&dev_sinogram_float, nAngles * sinogram_width * sizeof(float)));
-    gpuErrchk(cudaCallTakeFloatKernel(nBlocks, threadsPerBlock, dev_out_filter, dev_sinogram_float, nAngles, sinogram_width));
+    cudaCallTakeFloatKernel(nBlocks, threadsPerBlock, dev_out_filter, dev_sinogram_float, nAngles, sinogram_width);
     // free dev_sinogram_cmplx
     gpuErrchk(cudaFree(dev_sinogram_cmplx));
     gpuErrchk(cudaFree(dev_out_filter));
@@ -311,7 +310,7 @@ int main(int argc, char** argv){
     gpuErrchk(cudaMalloc((void**)&output_dev, size_result * sizeof(float)));
 
     // call back projection kernel
-    gpuErrchk(cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height));
+    cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
     
     
 
