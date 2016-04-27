@@ -91,7 +91,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
                         const unsigned int width, 
                         const unsigned int height) {
     unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
-    unsigned int l = nAngles * sinogram_width; 
+    // unsigned int l = nAngles * sinogram_width; 
     unsigned int size = width * height;
 
     while (thread_index < size) {
