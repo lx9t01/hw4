@@ -71,6 +71,61 @@ void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impuls
     }
 }
 
+__global__
+void cudaTakeFloatKernel(const cufftComplex *dev_out_filter, 
+                        float *dev_sinogram_float, const unsigned int nAngles, const unsigned int sinogram_width) {
+    unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
+    unsigned int l = nAngles * sinogram_width; 
+    while (thread_index < l) {
+        dev_sinogram_float[thread_index] = dev_out_filter[thread_index].x;
+        thread_index += blockDim.x * gridDim.x;
+    }
+}
+
+
+__global__
+void cudaBackProjKernel(const float dev_sinogram_float, 
+                        float output_dev, 
+                        const unsigned int nAngles, 
+                        const unsigned int sinogram_width,
+                        const unsigned int width, 
+                        const unsigned int height) {
+    unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
+    unsigned int l = nAngles * sinogram_width; 
+    unsigned int size = width * height;
+
+    while (thread_index < size) {
+        int y0 = thread_index / width;
+        int x0 = thread_index % width;
+
+        for (int i = 0; i < nAngles; ++i) {
+            float sita = (float)i * 2 * PI / nAngles;
+            float d, d_int;
+            if (sita == 0) {
+                d = x0;
+            } else if (sita == PI / 2) {
+                d = y0;
+            } else if (sita == PI) {
+                d = -x0;
+            } else if (sita == 3 * PI / 2) {
+                d = -y0;
+            } else {
+                float m = -cos(sita)/sin(sita);
+                float q = -1/m;
+                float xi = (y0 - m * x0)/(q - m);
+                float yi = q * xi;
+                d = sqrt(xi * xi + yi * yi);
+            }
+            d_int = (int)d;
+            output_dev[thread_index] += dev_sinogram_float[i * nAngles + d_int + sinogram_width / 2];
+        }
+
+        thread_index += blockDim.x * gridDim.x;
+    }
+
+}
+
+
 
 void cudaCallMultiplyKernel (const unsigned int blocks, 
                             const unsigned int threadsPerBlock,
@@ -80,6 +135,27 @@ void cudaCallMultiplyKernel (const unsigned int blocks,
                             const unsigned int nAngles, 
                             const unsigned int sinogram_width) {
     cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, impulse_v, out_data, nAngles, sinogram_width);
+}
+
+
+void cudaCallTakeFloatKernel(const unsigned int nBlocks, 
+                            const unsigned int threadsPerBlock, 
+                            const cufftComplex *dev_out_filter, 
+                            float *dev_sinogram_float, 
+                            const unsigned int nAngles, 
+                            const unsigned int sinogram_width) {
+    cudaTakeFloatKernel<<<nBlocks, threadsPerBlock>>>(dev_out_filter, dev_sinogram_float, nAngles, sinogram_width);
+}
+
+void cudaCallBackProjKernel(const unsigned int nBlocks, 
+                            const unsigned int threadsPerBlock, 
+                            const float *dev_sinogram_float, 
+                            float *output_dev, 
+                            const unsigned int nAngles, 
+                            const unsigned int sinogram_width
+                            const unsigned int width, 
+                            const unsigned int height) {
+    cudaBackProjKernel<<<nBlocks, threadsPerBlock>>>(dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
 }
 
 
@@ -173,7 +249,6 @@ int main(int argc, char** argv){
 
     /* TODO ok: Allocate memory for all GPU storage above, copy input sinogram
     over to dev_sinogram_cmplx. */
-    int FILTER_SIZE = sinogram_width;
 
     gpuErrchk(cudaMalloc((void**)&dev_sinogram_cmplx, nAngles * sinogram_width * sizeof(cufftComplex)));
     gpuErrchk(cudaMemcpy(dev_sinogram_cmplx, sinogram_host, \
@@ -181,7 +256,7 @@ int main(int argc, char** argv){
 
 
 
-    /* TODO 1: Implement the high-pass filter:
+    /* TODO 1 ok: Implement the high-pass filter:
         - Use cuFFT for the forward FFT
         - Create your own kernel for the frequency scaling.
         - Use cuFFT for the inverse FFT
@@ -218,7 +293,12 @@ int main(int argc, char** argv){
     // destroy the cufft plan
     gpuFFTchk(cufftDestroy(plan));
 
-
+    // take the float
+    gpuErrchk(cudaMalloc((void**)&dev_sinogram_float, nAngles * sinogram_width * sizeof(float)));
+    gpuErrchk(cudaCallTakeFloatKernel(nBlocks, threadsPerBlock, dev_out_filter, dev_sinogram_float, nAngles, sinogram_width));
+    // free dev_sinogram_cmplx
+    gpuErrchk(cudaFree(dev_sinogram_cmplx));
+    gpuErrchk(cudaFree(dev_out_filter));
 
     /* TODO 2: Implement backprojection.
         - Allocate memory for the output image.
@@ -227,7 +307,20 @@ int main(int argc, char** argv){
         - Free all remaining memory on the GPU.
     */
 
+    // Allocate memory for the output image.
+    gpuErrchk(cudaMalloc((void**)&output_dev, size_result * sizeof(float)));
+
+    // call back projection kernel
+    gpuErrchk(cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height));
     
+    
+
+
+
+
+
+
+
     /* Export image data. */
 
     for(j = 0; j < width; j++){
