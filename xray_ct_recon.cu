@@ -55,16 +55,18 @@ void checkCUDAKernelError()
 }
 
 __global__ 
-void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
-                                cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
+void cudaMultiplyKernel(const cufftComplex *raw_data, 
+                        cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
     unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
 
     while (thread_index < nAngles * sinogram_width) {
         unsigned int p = thread_index % sinogram_width; 
 
-        out_data[thread_index].x = raw_data[thread_index].x * impulse_v[p].x - raw_data[thread_index].y * impulse_v[p].y;
+        out_data[thread_index].x = raw_data[thread_index].x * (1.0 - abs((float)(2*p-sinogram_width))/sinogram_width) - \
+                raw_data[thread_index].y * (1.0 - abs((float)(2*p-sinogram_width))/sinogram_width);
         out_data[thread_index].x /= (nAngles * sinogram_width);
-        out_data[thread_index].y = raw_data[thread_index].x * impulse_v[p].y + raw_data[thread_index].y * impulse_v[p].x;
+        out_data[thread_index].y = raw_data[thread_index].x * (1.0 - abs((float)(2*p-sinogram_width))/sinogram_width) + \
+                raw_data[thread_index].y * (1.0 - abs((float)(2*p-sinogram_width))/sinogram_width);
         out_data[thread_index].y /= (nAngles * sinogram_width);
         thread_index += blockDim.x * gridDim.x;
     }
@@ -126,7 +128,6 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 void cudaCallMultiplyKernel (const unsigned int blocks, 
                             const unsigned int threadsPerBlock,
                             const cufftComplex *raw_data,
-                            const cufftComplex *impulse_v, 
                             cufftComplex *out_data,
                             const unsigned int nAngles, 
                             const unsigned int sinogram_width) {
@@ -263,18 +264,18 @@ int main(int argc, char** argv){
         transforms in cuFFT, you'll have to slightly change our code above.
     */
 
-    // create the high pass filter vector
+    // // create the high pass filter vector
 
-    cufftComplex *filter_v = (cufftComplex*)malloc(sizeof(cufftComplex) * sinogram_width);
-    for (int i = 0; i < sinogram_width; ++i) {
-        filter_v[i].x = 1 - abs((float)(2 * i - sinogram_width) / sinogram_width);
-        filter_v[i].y = 0;
-    } // on freq domain
+    // cufftComplex *filter_v = (cufftComplex*)malloc(sizeof(cufftComplex) * sinogram_width);
+    // for (int i = 0; i < sinogram_width; ++i) {
+    //     filter_v[i].x = 1 - abs((float)(2 * i - sinogram_width) / sinogram_width);
+    //     filter_v[i].y = 0;
+    // } // on freq domain
 
     // DATA storage
-    cufftComplex *dev_filter_v;
-    gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex) * sinogram_width));
-    gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+    // cufftComplex *dev_filter_v;
+    // gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex) * sinogram_width));
+    // gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
     cufftComplex *dev_out_filter;
     gpuErrchk(cudaMalloc((void**)&dev_out_filter, sizeof(cufftComplex) * sinogram_width * nAngles));
 
