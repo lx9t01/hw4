@@ -84,8 +84,8 @@ void cudaTakeFloatKernel(const cufftComplex *dev_out_filter,
 
 
 __global__
-void cudaBackProjKernel(const float dev_sinogram_float, 
-                        float output_dev, 
+void cudaBackProjKernel(const float *dev_sinogram_float, 
+                        float *output_dev, 
                         const unsigned int nAngles, 
                         const unsigned int sinogram_width,
                         const unsigned int width, 
