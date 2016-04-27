@@ -54,6 +54,32 @@ void checkCUDAKernelError()
 
 }
 
+__gloabl__ void cudaMultiplyKernel(const cufftComplex *raw_data, const cufftComplex *impulse_v, 
+                                cufftComplex *out_data, unsigned int nAngles, unsigned int sinogram_width) {
+    unsigned int l = nAngles * sinogram_width; 
+    unsigned int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    while (thread_index < l) {
+        unsigned int p = thread_index % sinogram_width; 
+
+        out_data[thread_index].x = raw_data[thread_index].x * impulse_v[p].x - raw_data[thread_index].y * impulse_v[p].y;
+        out_data[thread_index].x /= l;
+        out_data[thread_index].y = raw_data[thread_index].x * impulse_v[p].y + raw_data[thread_index].y * impulse_v[p].x;
+        out_data[thread_index].y /= l;
+        thread_index += blockDim.x * gridDim.x;
+    }
+}
+
+
+void cudaCallMultiplyKernel (const unsigned int blocks, 
+                            const unsigned int threadsPerBlock,
+                            const cufftComplex *raw_data,
+                            const cufftComplex *impulse_v, 
+                            cufftComplex *out_data,
+                            const unsigned int nAngles, 
+                            const unsigned int sinogram_width) {
+    cudaMultiplyKernel<<<blocks, threadsPerBlock>>>(raw_data, impulse_v, out_data, length);
+}
 
 
 
@@ -146,16 +172,11 @@ int main(int argc, char** argv){
 
     /* TODO ok: Allocate memory for all GPU storage above, copy input sinogram
     over to dev_sinogram_cmplx. */
-    int FILTER_SIDE_WIDTH = 314; 
-    int FILTER_SIZE = 2 * FILTER_SIDE_WIDTH + 1;
+    int FILTER_SIZE = sinogram_width;
 
-    int sino_length = sinogram_width * nAngles;
-    int padded_length = sino_length + FILTER_SIZE - 1;
-
-    gpuErrchk(cudaMalloc((void**)&dev_sinogram_cmplx, padded_length * sizeof(cufftComplex)));
+    gpuErrchk(cudaMalloc((void**)&dev_sinogram_cmplx, nAngles * sinogram_width * sizeof(cufftComplex)));
     gpuErrchk(cudaMemcpy(dev_sinogram_cmplx, sinogram_host, \
-        sino_length * sizeof(cufftComplex), cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemset(dev_sinogram_cmplx + sino_length, 0, (padded_length - sino_length) * sizeof(cufftComplex)));
+        nAngles * sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
 
 
 
@@ -172,16 +193,30 @@ int main(int argc, char** argv){
 
     // create the high pass filter vector
 
-    cufftComplex *filter_v = (cufftComplex*)malloc(sizeof(cufftComplex) * FILTER_SIZE);
-    for (int i = -FILTER_SIDE_WIDTH; i <= FILTER_SIDE_WIDTH; ++i) {
-        filter_v[ FILTER_SIDE_WIDTH + i ].x = abs((float)i / FILTER_SIDE_WIDTH);
-        filter_v[ FILTER_SIDE_WIDTH + i ].y = 0;
-    }
+    cufftComplex *filter_v = (cufftComplex*)malloc(sizeof(cufftComplex) * sinogram_width);
+    for (int i = 0; i < sinogram_width; ++i) {
+        filter_v[i].x = 1 - abs((float)(2 * i - sinogram_width) / sinogram_width);
+        filter_v[i].y = 0;
+    } // on freq domain
 
     // DATA storage
     cufftComplex *dev_filter_v;
-    gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex)*padded_length));
-    gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, FILTER_SIZE * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMalloc((void**)&dev_filter_v, sizeof(cufftComplex) * sinogram_width));
+    gpuErrchk(cudaMemcpy(dev_filter_v, filter_v, sinogram_width * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+    cufftComplex *dev_out_filter;
+    gpuErrchk(cudaMalloc((void**)&dev_out_filter, sizeof(cufftComplex) * sinogram_width * nAngles));
+
+    cufftHandle plan;
+    gpuFFTchk(cufftPlan1d(&plan, nAngles * sinogram_width, CUFFT_C2C, 1));
+    gpuFFTchk(cufftExecC2C(plan, dev_sinogram_cmplx, dev_sinogram_cmplx, CUFFT_FORWARD));
+
+    // call the kernel to perform the filter
+    cudaCallMultiplyKernel(nBlocks, threadsPerBlock, dev_sinogram_cmplx, impulse_v, dev_out_filter, nAngles, sinogram_width);
+    // inverse fft
+    gpuFFTchk(cufftExecC2C(plan, dev_out_filter, dev_out_filter, CUFFT_INVERSE));
+    // destroy the cufft plan
+    gpuFFTchk(cufftDestroy(plan));
+
 
 
     /* TODO 2: Implement backprojection.

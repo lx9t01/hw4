@@ -14,7 +14,21 @@ Va need not to use the shared memory because it only has to be accessed 2 consec
 It would be good to use reduction methods to calculate the sum of the F vector, and check if the sum is 0. If the F is all false, then the sum should be 0. 
 
 1.3
-keep a queue of fromtier vector F and check if the queue is empty after each iteration. Or use a flag to indicate if the queue is empty after the iteration. 
+Traditionally, keep a queue of fromtier vector F and check if the queue is empty after each iteration. BUT it's not a wise way to be implemented in GPU paralelly. So instead, we use a flag to indicate if the queue is empty after the iteration. 
+The flag should be set to true once any neighbouring ndoes of previous iteration is NOT visited (i.e. if x[j] is false), then we know that F[j] is set to true and should be visited later, so we set flag = true. And each iteration when we have to evaluate if F is all false, we look at flag to see if flag == true (i.e. F is not all false)
+
+{
+	if X[j] is false:
+        C[j] = C[threadId] + 1
+        F[j] = true
+        flag = true
+}
+
+Again, if graph is sparse, then iterating through X[j] is expensive and we should maybe use shared memory to store X, (maybe better to iterative through F). If X is sparse, then keeping the flag is better way.
 
 2.
+
+
+
+
 
