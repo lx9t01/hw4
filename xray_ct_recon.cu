@@ -312,7 +312,7 @@ int main(int argc, char** argv){
 
     // Allocate memory for the output image.
     gpuErrchk(cudaMalloc((void**)&output_dev, size_result));
-
+    gpuErrchk(cudaMemset(output_dev, 0, size_result));
     // call back projection kernel
     cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
     printf("finish back proj\n");
