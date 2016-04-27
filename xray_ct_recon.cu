@@ -99,20 +99,16 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
     // unsigned int l = nAngles * sinogram_width; 
 
     while (thread_index < width * height) {
-        int y0 = thread_index / width;
-        int x0 = thread_index % width;
+        int y0 = height / 2 - thread_index / width;
+        int x0 = thread_index % width - width / 2;
 
         for (int i = 0; i < nAngles; ++i) {
-            float sita = (float)i * 2 * PI / nAngles;
+            float sita = (float)i * PI / nAngles;
             float d;
             if (sita == 0) {
                 d = x0;
             } else if (sita == PI / 2) {
                 d = y0;
-            } else if (sita == PI) {
-                d = -x0;
-            } else if (sita == 3 * PI / 2) {
-                d = -y0;
             } else {
                 float m = -cos(sita)/sin(sita);
                 float q = -1/m;
@@ -312,7 +308,7 @@ int main(int argc, char** argv){
     */
 
     // Allocate memory for the output image.
-    gpuErrchk(cudaMalloc((void**)&output_dev, size_result * sizeof(float)));
+    gpuErrchk(cudaMalloc((void**)&output_dev, size_result));
 
     // call back projection kernel
     cudaCallBackProjKernel(nBlocks, threadsPerBlock, dev_sinogram_float, output_dev, nAngles, sinogram_width, width, height);
