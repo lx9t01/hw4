@@ -104,7 +104,7 @@ void cudaBackProjKernel(const float *dev_sinogram_float,
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
-             d, xi, yi, q;
+            float d, xi, yi, q;
             if (sita == 0) {
                 d = x0;
             } else if (sita == PI / 2) {
