@@ -130,6 +130,8 @@ void cudaBackProjKernel(float *output_dev,
                 // output_dev[index] += dev_sinogram_float[(int)(i * sinogram_width + d + sinogram_width / 2)];
             }
         }
+        xindex += blockDim.x * gridDim.x;
+        yindex += blockDim.y * gridDim.y;
     }
 
 }
