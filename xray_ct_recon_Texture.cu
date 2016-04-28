@@ -102,7 +102,7 @@ void cudaBackProjKernel(float *output_dev,
 
     while (thread_index < width * height) {
         int y0 = height/2 - thread_index / width;
-        int x0 = thread_index % width - width / 2;
+        int x0 = thread_index % width - width /;
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
@@ -326,7 +326,7 @@ int main(int argc, char** argv){
     channel = cudaCreateChannelDesc<float>();
 
     // allocate device memory for cuda array
-    gpuErrchk(cudaMallocArray(&cArray, &channel, nAngles, sinogram_width));
+    gpuErrchk(cudaMallocArray(&cArray, &channel, sinogram_width, nAngles));
     int bytes = sizeof(float) * nAngles * sinogram_width;
     gpuErrchk(cudaMemcpyToArray(cArray, 0, 0, dev_sinogram_float, bytes, cudaMemcpyDeviceToDevice)); 
     // copy float sinogram from gloabl memory to texture memory =(
