@@ -320,7 +320,7 @@ int main(int argc, char** argv){
 
     // first I think I will have to copy dev_sinogram_float from device to host;
     float *host_sinogram_float = (float*)malloc(sizeof(float)*nAngles*sinogram_width);
-    gpuErrchk(cudaMemcpy(host_sinogram_float, dev_sinogram_float, sizeof(float)*nAngles*sinogram_width));
+    gpuErrchk(cudaMemcpy(host_sinogram_float, dev_sinogram_float, sizeof(float)*nAngles*sinogram_width, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaFree(dev_sinogram_float));
 
     dim3 blockNum;
