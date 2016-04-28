@@ -21,6 +21,8 @@ Modified by Jordan Bonilla and Matthew Cedeno (2016)
 #define PI 3.14159265358979
 
 
+
+
 /* Check errors on CUDA runtime functions */
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -32,7 +34,8 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
     }
 }
 
-
+// declare texture reference 
+texture<float, 2, cudaReadModeElementType> texreference;
 
 /* Check errors on cuFFT functions */
 void gpuFFTchk(int errval){
@@ -161,8 +164,7 @@ void cudaCallBackProjKernel(const unsigned int nBlocks,
     cudaBackProjKernel<<<nBlocks, threadsPerBlock>>>(output_dev, nAngles, sinogram_width, width, height);
 }
 
-// declare texture reference 
-texture<float, 2, cudaReadModeElementType> texreference;
+
 
 
 int main(int argc, char** argv){
@@ -332,7 +334,7 @@ int main(int argc, char** argv){
     // allocate device memory for cuda array
     gpuErrchk(cudaMallocArray(&cArray, &channel, nAngles, sinogram_width));
     int bytes = sizeof(float) * nAngles * sinogram_width;
-    gouErrchk(cudaMemcpyToArray(cArray, 0, 0, host_sinogram_float, bytes, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpyToArray(cArray, 0, 0, host_sinogram_float, bytes, cudaMemcpyHostToDevice));
 
     // set texture filter mode
     texreference.filterMode = cudaFilterModeLinear;
