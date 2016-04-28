@@ -119,9 +119,9 @@ void cudaBackProjKernel(float *output_dev,
                 d = sqrtf(xi * xi + yi * yi);
             }
             if ((q > 0 && xi < 0)||(q < 0 && xi > 0)) {
-                output_dev[index] += tex2D(texreference, sinogram_width/2-d, i); // ( , xindex, yindex)
+                output_dev[thread_index] += tex2D(texreference, sinogram_width/2-d, i); // ( , xindex, yindex)
             } else {
-                output_dev[index] += tex2D(texreference, sinogram_width/2+d, i);
+                output_dev[thread_index] += tex2D(texreference, sinogram_width/2+d, i);
                 // output_dev[index] += dev_sinogram_float[(int)(i * sinogram_width + d + sinogram_width / 2)];
             }
         }
@@ -386,7 +386,6 @@ int main(int argc, char** argv){
 
     free(sinogram_host);
     free(output_host);
-    free(host_sinogram_float);
 
     fclose(outputFile);
     printf("CT reconstruction complete. Total run time: %f seconds\n", (float) (clock() - start) / 1000.0);
