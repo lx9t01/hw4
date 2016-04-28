@@ -102,7 +102,7 @@ void cudaBackProjKernel(float *output_dev,
 
     while (thread_index < width * height) {
         int y0 = height/2 - thread_index / width;
-        int x0 = thread_index % width - width /;
+        int x0 = thread_index % width - width /2;
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
