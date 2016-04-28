@@ -97,17 +97,12 @@ void cudaBackProjKernel(float *output_dev,
                         const unsigned int sinogram_width,
                         const unsigned int width, 
                         const unsigned int height) {
-    unsigned int xindex;
-    unsigned int yindex;
 
-    xindex = blockIdx.x * blockDim.x + threadIdx.x;
-    yindex = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned int thread_index = blockDim.x * blockIdx.x + threadIdx.x;
 
-    unsigned int index = yindex * width + xindex;
-
-    while (index < width * height) {
-        int y0 = height / 2 - yindex;
-        int x0 = xindex;
+    while (thread_index < width * height) {
+        int y0 = height/2 - thread_index / width;
+        int x0 = thread_index % width;
 
         for (int i = 0; i < nAngles; ++i) {
             float sita = (float)i * PI / nAngles;
@@ -124,14 +119,13 @@ void cudaBackProjKernel(float *output_dev,
                 d = sqrtf(xi * xi + yi * yi);
             }
             if ((q > 0 && xi < 0)||(q < 0 && xi > 0)) {
-                output_dev[index] += tex2D(texreference, sinogram_width/2-d, nAngles);
+                output_dev[index] += tex2D(texreference, sinogram_width/2-d, i); // ( , xindex, yindex)
             } else {
-                output_dev[index] += tex2D(texreference, sinogram_width/2+d, nAngles);
+                output_dev[index] += tex2D(texreference, sinogram_width/2+d, i);
                 // output_dev[index] += dev_sinogram_float[(int)(i * sinogram_width + d + sinogram_width / 2)];
             }
         }
-        xindex += blockDim.x * gridDim.x;
-        yindex += blockDim.y * gridDim.y;
+        thread_index += blockDim.x * gridDim.x;
     }
 
 }
@@ -321,12 +315,10 @@ int main(int argc, char** argv){
     */
 
     // first I think I will have to copy dev_sinogram_float from device to host;
-    float *host_sinogram_float = (float*)malloc(sizeof(float)*nAngles*sinogram_width);
-    gpuErrchk(cudaMemcpy(host_sinogram_float, dev_sinogram_float, sizeof(float)*nAngles*sinogram_width, cudaMemcpyDeviceToHost));
-    gpuErrchk(cudaFree(dev_sinogram_float));
-
-    dim3 blockNum;
-    dim3 blockSize;
+    // but actually it's not necessary
+    // float *host_sinogram_float = (float*)malloc(sizeof(float)*nAngles*sinogram_width);
+    // gpuErrchk(cudaMemcpy(host_sinogram_float, dev_sinogram_float, sizeof(float)*nAngles*sinogram_width, cudaMemcpyDeviceToHost));
+    // gpuErrchk(cudaFree(dev_sinogram_float));
 
     cudaArray *cArray;
     cudaChannelFormatDesc channel;
@@ -336,22 +328,19 @@ int main(int argc, char** argv){
     // allocate device memory for cuda array
     gpuErrchk(cudaMallocArray(&cArray, &channel, nAngles, sinogram_width));
     int bytes = sizeof(float) * nAngles * sinogram_width;
-    gpuErrchk(cudaMemcpyToArray(cArray, 0, 0, host_sinogram_float, bytes, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpyToArray(cArray, 0, 0, dev_sinogram_float, bytes, cudaMemcpyDeviceToDevice)); 
+    // copy float sinogram from gloabl memory to texture memory =(
+    gpuErrchk(cudaFree(dev_sinogram_float));
 
     // set texture filter mode
     texreference.filterMode = cudaFilterModeLinear;
 
     // set texture address mode
-    texreference.addressMode[0] = cudaAddressModeClamp;
+    texreference.addressMode[0] = cudaAddressModeWrap; // necessary???
+    texreference.addressMode[1] = cudaAddressModeClamp;
 
     // bind texture reference with cuda array
     gpuErrchk(cudaBindTextureToArray(texreference, cArray));
-
-    // blocksize????
-    blockSize.x = 16;
-    blockSize.y = 16;
-    blockNum.x = (int)ceil((float)sinogram_width/16);
-    blockNum.y = (int)ceil((float)nAngles/16);
 
     // Allocate memory for the output image.
     gpuErrchk(cudaMalloc((void**)&output_dev, size_result));
