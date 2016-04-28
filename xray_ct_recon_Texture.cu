@@ -333,7 +333,7 @@ int main(int argc, char** argv){
     gpuErrchk(cudaFree(dev_sinogram_float));
 
     // set texture filter mode
-    texreference.filterMode = cudaFilterModeLinear;
+    texreference.filterMode = cudaFilterModePoint;
 
     // set texture address mode
     texreference.addressMode[0] = cudaAddressModeWrap; // necessary???
